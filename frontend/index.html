@@ -1,0 +1,172 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Monitor PPIII</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<nav class="navbar navbar-dark bg-dark">
+    <div class="container-fluid px-4">
+        <span class="navbar-brand">Monitor PPIII</span>
+        <span id="estado" class="badge bg-secondary">
+            Conectando...
+        </span>
+    </div>
+</nav>
+
+<main class="container py-4">
+
+    <h2>Panel de monitoreo</h2>
+    <p class="text-muted">
+        Supervisión de infraestructura en tiempo real
+    </p>
+
+    <!-- NAVEGACION -->
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <button class="nav-link active" id="btnServidor"
+                    type="button" onclick="mostrarSeccion('servidor')">
+                Servidor Linux
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="btnRed"
+                    type="button" onclick="mostrarSeccion('red')">
+                Equipos de red
+            </button>
+        </li>
+    </ul>
+
+    <!-- MONITOREO SERVIDOR -->
+    <section id="seccionServidor">
+
+        <div class="row g-3">
+
+            <div class="col-md-6 col-lg-3">
+                <div class="card recurso">
+                    <div class="card-body">
+                        <h6>CPU</h6>
+                        <h2 id="cpu">-- %</h2>
+                        <div class="progress">
+                            <div id="barraCpu" class="progress-bar"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+                <div class="card recurso">
+                    <div class="card-body">
+                        <h6>Memoria RAM</h6>
+                        <h2 id="ram">-- %</h2>
+                        <div class="progress">
+                            <div id="barraRam"
+                                 class="progress-bar bg-success"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+                <div class="card recurso">
+                    <div class="card-body">
+                        <h6>Disco</h6>
+                        <h2 id="disco">-- %</h2>
+                        <div class="progress">
+                            <div id="barraDisco"
+                                 class="progress-bar bg-warning"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+                <div class="card recurso">
+                    <div class="card-body">
+                        <h6>Procesos</h6>
+                        <h2 id="procesos">--</h2>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+<!-- GRAFICOS DE RECURSOS -->
+<div class="row g-3 mt-3">
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5>Historial de CPU</h5>
+                <canvas id="graficoCpu"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5>Historial de RAM</h5>
+                <canvas id="graficoRam"></canvas>
+            </div>
+        </div>
+    </div>
+
+</div>
+        <!-- INFORMACION GENERAL -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <h5>Información del servidor</h5>
+                <hr>
+
+                <p>Hostname: <strong id="hostname">--</strong></p>
+                <p>Distribución: <strong id="sistema">--</strong></p>
+                <p>Kernel: <strong id="kernel">--</strong></p>
+                <p>Arquitectura: <strong id="arquitectura">--</strong></p>
+                <p>Uptime: <strong id="uptime">--</strong></p>
+                <p>Última actualización: <strong id="fecha">--</strong></p>
+            </div>
+        </div>
+
+    </section>
+
+    <!-- MONITOREO DE RED -->
+    <section id="seccionRed" class="d-none">
+
+        <div class="card">
+            <div class="card-body">
+                <h5>Monitoreo de dispositivos de red</h5>
+                <hr>
+
+                <div class="alert alert-secondary">
+                    No hay dispositivos configurados.
+                </div>
+
+                <p>
+                    Este módulo permitirá incorporar equipos MikroTik
+                    y switches administrables mediante SNMP.
+                </p>
+
+                <p class="text-muted">
+                    La integración no es necesaria para el
+                    funcionamiento del monitoreo del servidor.
+                </p>
+            </div>
+        </div>
+
+    </section>
+
+</main>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>

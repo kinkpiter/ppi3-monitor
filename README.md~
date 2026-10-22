@@ -1,0 +1,179 @@
+# Monitor PPIII
+## Trabajo Práctico Final Integrador – Práctica Profesionalizante III
+
+### 1. Descripción del proyecto
+
+Monitor PPIII es una aplicación desarrollada para supervisar los recursos de hardware de un servidor GNU/Linux mediante una interfaz web.
+
+El sistema obtiene información del servidor utilizando Node.js y la librería `systeminformation`, expone los datos mediante una API REST desarrollada con Express y permite visualizarlos en tiempo real utilizando Socket.IO.
+
+El proyecto contempla una futura ampliación para monitorear dispositivos de red, como routers MikroTik y switches administrables TP-Link, mediante SNMP.
+
+### 2. Objetivos
+
+- Desarrollar una aplicación de monitoreo para GNU/Linux.
+- Obtener estadísticas de CPU, RAM, disco y procesos.
+- Implementar una API REST mediante Node.js y Express.
+- Utilizar Socket.IO para actualizar los datos en tiempo real.
+- Desarrollar una interfaz web con HTML, CSS, JavaScript y Bootstrap 5.
+- Incorporar gráficos de utilización de recursos.
+- Preparar una versión móvil mediante HTML2APK.
+- Utilizar Git y GitHub para el control de versiones.
+
+### 3. Tecnologías utilizadas
+
+**Backend**
+- Node.js
+- Express
+- Socket.IO
+- systeminformation
+- CORS
+- HTTP
+
+**Frontend**
+- HTML5
+- CSS3
+- JavaScript
+- Bootstrap 5
+- Chart.js
+
+**Sistema operativo y herramientas**
+- Debian GNU/Linux 12
+- npm
+- Git
+- GitHub
+
+### 4. Funcionalidades implementadas
+
+- Monitoreo del porcentaje de utilización de CPU.
+- Monitoreo de memoria RAM.
+- Monitoreo de almacenamiento.
+- Visualización de procesos del sistema.
+- Información del sistema operativo y kernel.
+- Consulta del tiempo de actividad del servidor.
+- API REST para obtener los recursos.
+- Comunicación en tiempo real mediante Socket.IO.
+- Gráficos temporales de CPU y RAM.
+- Interfaz web adaptable a diferentes pantallas.
+
+### 5. Estructura del proyecto
+
+```text
+ppi3-monitor/
+├── backend/
+│   ├── server.js
+│   ├── package.json
+│   └── package-lock.json
+├── frontend/
+│   ├── index.html
+│   ├── app.js
+│   └── style.css
+├── docs/
+│   └── README.md
+├── mobile/
+│   └── README.md
+├── .gitignore
+└── README.md
+```
+
+### 6. Instalación y ejecución
+
+**Requisitos:**
+- Sistema GNU/Linux.
+- Node.js y npm.
+- Navegador web.
+
+Clonar el repositorio (una vez publicado en GitHub).
+
+Ingresar al directorio del backend:
+
+```bash
+cd backend
+```
+
+Instalar las dependencias:
+
+```bash
+npm install
+```
+
+Iniciar la aplicación:
+
+```bash
+npm start
+```
+
+Abrir el navegador:
+
+```text
+http://localhost:3001
+```
+
+### 7. Endpoints de la API
+
+**GET /api/health**
+
+Permite verificar que el servidor Node.js se encuentra funcionando.
+
+**GET /api/sysinfo**
+
+Devuelve información del sistema GNU/Linux:
+
+- Hostname.
+- Sistema operativo.
+- Arquitectura.
+- Kernel.
+- CPU.
+- RAM.
+- Disco.
+- Procesos.
+- Uptime.
+- Fecha y hora.
+
+### 8. Comunicación en tiempo real
+
+La aplicación utiliza Socket.IO para establecer una comunicación entre el servidor y el navegador.
+
+Cada tres segundos, el backend obtiene los recursos del sistema y emite el evento `recursos`.
+
+El frontend recibe esta información y actualiza automáticamente los indicadores y gráficos.
+
+### 9. Monitoreo de equipos de red
+
+Se contempla una ampliación opcional para integrar:
+
+- Router MikroTik hEX S.
+- Switch TP-Link administrable.
+- Consultas de información mediante SNMP.
+- Estadísticas de interfaces y tráfico.
+
+**Estado:** pendiente de implementación.
+
+Este módulo será independiente del monitoreo del servidor GNU/Linux.
+
+### 10. Funcionalidades pendientes
+
+- Integración opcional mediante SNMP.
+- Configuración del servicio systemd.
+- Desarrollo y empaquetado de la aplicación móvil.
+- Incorporación de diagramas Mermaid.
+- Documentación de pruebas.
+- Gestión de tareas mediante GitHub Projects.
+
+### 11. Desarrollo y control de versiones
+
+El proyecto se desarrolla individualmente utilizando Git para registrar los cambios realizados.
+
+Se utilizarán ramas de desarrollo para incorporar nuevas funcionalidades y posteriormente integrarlas mediante merge a la rama principal `main`.
+
+### 12. Autor
+
+Trabajo Práctico Final Integrador de Práctica Profesionalizante III.
+
+Desarrollo individual.
+
+### 13. Estado del proyecto
+
+**En desarrollo.**
+
+Backend y frontend web funcionales, con monitoreo de recursos y gráficos en tiempo real.
