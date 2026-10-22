@@ -137,31 +137,87 @@
 
     </section>
 
-    <!-- MONITOREO DE RED -->
-    <section id="seccionRed" class="d-none">
+    
+<!-- MONITOREO DE RED -->
+<section id="seccionRed" class="d-none">
 
-        <div class="card">
-            <div class="card-body">
-                <h5>Monitoreo de dispositivos de red</h5>
-                <hr>
+<!-- INTERFACES MIKROTIK -->
 
-                <div class="alert alert-secondary">
-                    No hay dispositivos configurados.
-                </div>
+<div class="card mb-4">
+    <div class="card-body">
 
-                <p>
-                    Este módulo permitirá incorporar equipos MikroTik
-                    y switches administrables mediante SNMP.
-                </p>
+        <h5>Interfaces de red - MikroTik</h5>
+        <hr>
 
-                <p class="text-muted">
-                    La integración no es necesaria para el
-                    funcionamiento del monitoreo del servidor.
-                </p>
-            </div>
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Interfaz</th>
+                        <th>Estado</th>
+                        <th>RX (Mbps)</th>
+                        <th>TX (Mbps)</th>
+                    </tr>
+                </thead>
+
+                <tbody id="tablaInterfaces">
+                    <tr>
+                        <td colspan="4">
+                            Esperando datos SNMP...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
 
-    </section>
+    </div>
+</div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+
+            <div class="d-flex justify-content-between align-items-center">
+                <h5>Router MikroTik</h5>
+
+                <span id="estadoMikrotik" class="badge bg-secondary">
+                    Consultando...
+                </span>
+            </div>
+
+            <hr>
+
+            <div class="row g-3">
+
+                <div class="col-md-6">
+                    <h6 class="text-muted">Nombre del equipo</h6>
+                    <h4 id="nombreMikrotik">--</h4>
+                </div>
+
+                <div class="col-md-6">
+                    <h6 class="text-muted">Tiempo de actividad</h6>
+                    <h4 id="uptimeMikrotik">--</h4>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+
+            <h5>Switch TP-Link</h5>
+            <hr>
+
+            <div class="alert alert-secondary mb-0">
+                Dispositivo pendiente de integración SNMP.
+            </div>
+
+        </div>
+    </div>
+
+</section>
+
 
 </main>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>

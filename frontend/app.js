@@ -201,3 +201,142 @@ function mostrarSeccion(seccion) {
 // ===== INICIO =====
 
 cargarDatos();
+
+// ===== MONITOREO MIKROTIK =====
+
+function mostrarMikrotik(datos) {
+
+    const estado = document.getElementById("estadoMikrotik");
+
+    if (datos.estado === "conectado") {
+
+        estado.textContent = "Conectado";
+        estado.className = "badge bg-success";
+
+        document.getElementById("nombreMikrotik").textContent =
+            datos.nombre ?? "--";
+
+        const segundos = Number(datos.uptimeSegundos) || 0;
+
+        const dias = Math.floor(segundos / 86400);
+        const horas = Math.floor((segundos % 86400) / 3600);
+        const minutos = Math.floor((segundos % 3600) / 60);
+
+        document.getElementById("uptimeMikrotik").textContent =
+            `${dias}d ${horas}h ${minutos}m`;
+
+    } else {
+
+        estado.textContent =
+            datos.estado === "no_configurado"
+                ? "No configurado"
+                : "Desconectado";
+
+        estado.className = "badge bg-secondary";
+
+        document.getElementById("nombreMikrotik").textContent = "--";
+        document.getElementById("uptimeMikrotik").textContent = "--";
+    }
+}
+
+// Consulta inicial al endpoint HTTP
+async function cargarMikrotik() {
+
+    try {
+
+        const respuesta = await fetch("/api/network/mikrotik");
+        const datos = await respuesta.json();
+
+        mostrarMikrotik(datos);
+
+    } catch (error) {
+
+        console.error("Error consultando MikroTik:", error);
+
+        mostrarMikrotik({ estado: "desconectado" });
+    }
+}
+
+// Actualización en tiempo real
+socket.on("mikrotik", (datos) => {
+
+    mostrarMikrotik(datos);
+
+});
+
+// Primera consulta
+cargarMikrotik();
+
+// ===== TABLA DE INTERFACES MIKROTIK =====
+
+function mostrarInterfaces(interfaces) {
+
+    const tabla = document.getElementById("tablaInterfaces");
+
+    tabla.replaceChildren();
+
+    if (!interfaces || interfaces.length === 0) {
+        const fila = tabla.insertRow();
+        const celda = fila.insertCell();
+        celda.colSpan = 4;
+        celda.textContent = "Sin datos de interfaces";
+        return;
+    }
+
+    interfaces.forEach(interfaz => {
+
+        const fila = tabla.insertRow();
+
+        const nombre = fila.insertCell();
+        nombre.textContent = interfaz.nombre;
+
+        const estado = fila.insertCell();
+        const etiqueta = document.createElement("span");
+
+        etiqueta.className = interfaz.estado === "activa"
+            ? "badge bg-success"
+            : "badge bg-secondary";
+
+        etiqueta.textContent = interfaz.estado;
+        estado.appendChild(etiqueta);
+
+        const rx = fila.insertCell();
+        rx.textContent = interfaz.rxMbps == null
+            ? "Calculando..."
+            : interfaz.rxMbps.toFixed(3);
+
+        const tx = fila.insertCell();
+        tx.textContent = interfaz.txMbps == null
+            ? "Calculando..."
+            : interfaz.txMbps.toFixed(3);
+    });
+}
+
+// Actualizaciones Socket.IO
+
+socket.on("interfacesMikrotik", (interfaces) => {
+    mostrarInterfaces(interfaces);
+});
+
+// Consulta inicial HTTP
+
+async function cargarInterfaces() {
+    try {
+        const respuesta = await fetch(
+            "/api/network/mikrotik/interfaces"
+        );
+
+        if (!respuesta.ok) {
+            throw new Error("Error HTTP " + respuesta.status);
+        }
+
+        const datos = await respuesta.json();
+
+        mostrarInterfaces(datos.interfaces);
+
+    } catch (error) {
+        console.error("Error cargando interfaces:", error);
+    }
+}
+
+cargarInterfaces();

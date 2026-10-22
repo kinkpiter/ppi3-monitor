@@ -6,7 +6,11 @@ import si from "systeminformation";
 import { Server } from "socket.io";
 import path from "path";
 import { fileURLToPath } from "url";
-
+import "dotenv/config";
+import {
+    consultarMikrotik,
+    consultarInterfaces
+} from "./services/mikrotik.js";
 // ===== CONFIGURACION =====
 const app = express();
 const PUERTO = 3001;
@@ -140,19 +144,78 @@ app.get("/api/sysinfo", async (req, res) => {
         });
     }
 });
+// ===== ENDPOINT: MONITOREO MIKROTIK =====
 
+app.get("/api/network/mikrotik", async (req, res) => {
+
+    try {
+        const datos = await consultarMikrotik();
+
+        res.json(datos);
+
+    } catch (error) {
+
+        console.error("Error consultando MikroTik:", error.message);
+
+        res.status(503).json({
+            estado: "desconectado",
+            mensaje: "No se pudo consultar el MikroTik"
+        });
+    }
+});
+// ===== ENDPOINT: INTERFACES MIKROTIK =====
+
+let ultimasInterfaces = [];
+
+app.get("/api/network/mikrotik/interfaces", (req, res) => {
+    res.json({
+        estado: process.env.MIKROTIK_ENABLED === "true"
+            ? "habilitado"
+            : "no_configurado",
+        interfaces: ultimasInterfaces
+    });
+});
 // ===== SOCKET.IO =====
 
-io.on("connection", (socket) => {
+// ===== MONITOREO MIKROTIK EN TIEMPO REAL =====
 
-    console.log("Cliente conectado:", socket.id);
+if (process.env.MIKROTIK_ENABLED === "true") {
 
-    socket.on("disconnect", () => {
-        console.log("Cliente desconectado:", socket.id);
-    });
+    let consultando = false;
 
-});
+    async function actualizarMikrotik() {
 
+        if (consultando) return;
+
+        consultando = true;
+
+        try {
+            const datos = await consultarMikrotik();
+            io.emit("mikrotik", datos);
+
+            const interfaces = await consultarInterfaces();
+
+            ultimasInterfaces = interfaces;
+
+            io.emit("interfacesMikrotik", interfaces);
+
+        } catch (error) {
+            console.error("Error SNMP:", error.message);
+
+            io.emit("mikrotik", {
+                estado: "desconectado"
+            });
+
+            io.emit("interfacesMikrotik", []);
+        } finally {
+            consultando = false;
+        }
+    }
+
+    actualizarMikrotik();
+
+    setInterval(actualizarMikrotik, 10000);
+}
 // ===== ACTUALIZACION EN TIEMPO REAL =====
 
 // Enviar informacion cada 3 segundos
@@ -168,7 +231,29 @@ setInterval(async () => {
     }
 
 }, 3000);
+// ===== ACTUALIZACION SNMP MIKROTIK =====
 
+if (process.env.MIKROTIK_ENABLED === "true") {
+
+    setInterval(async () => {
+
+        try {
+
+            const datos = await consultarMikrotik();
+
+            io.emit("mikrotik", datos);
+
+        } catch (error) {
+
+            console.error("Error SNMP:", error.message);
+
+            io.emit("mikrotik", {
+                estado: "desconectado"
+            });
+        }
+
+    }, 10000);
+}
 // ===== INICIAR SERVIDOR =====
 
 servidor.listen(PUERTO, () => {
