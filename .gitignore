@@ -4,3 +4,9 @@ node_modules/
 !.env.example
 *.log
 .DS_Store
+
+# Archivos de respaldo
+*.bak
+*.bak2
+*.bak-final
+*~

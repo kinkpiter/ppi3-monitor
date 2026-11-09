@@ -6,8 +6,17 @@ import si from "systeminformation";
 import { Server } from "socket.io";
 import path from "path";
 import { fileURLToPath } from "url";
-
+import "dotenv/config";
+import {
+    consultarMikrotik,
+    consultarInterfaces,
+    consultarRecursosMikrotik
+} from "./services/mikrotik.js";
 // ===== CONFIGURACION =====
+import {
+    consultarTPLink,
+    consultarInterfacesTPLink
+} from "./services/tplink.js";
 const app = express();
 const PUERTO = 3001;
 
@@ -140,19 +149,120 @@ app.get("/api/sysinfo", async (req, res) => {
         });
     }
 });
+// ===== ENDPOINT: MONITOREO MIKROTIK =====
 
-// ===== SOCKET.IO =====
+app.get("/api/network/mikrotik", async (req, res) => {
 
-io.on("connection", (socket) => {
+    try {
+        const datos = await consultarMikrotik();
 
-    console.log("Cliente conectado:", socket.id);
+        res.json(datos);
 
-    socket.on("disconnect", () => {
-        console.log("Cliente desconectado:", socket.id);
+    } catch (error) {
+
+        console.error("Error consultando MikroTik:", error.message);
+
+        res.status(503).json({
+            estado: "desconectado",
+            mensaje: "No se pudo consultar el MikroTik"
+        });
+    }
+});
+// ===== ENDPOINT: INTERFACES MIKROTIK =====
+
+let ultimasInterfaces = [];
+
+app.get("/api/network/mikrotik/interfaces", (req, res) => {
+    res.json({
+        estado: process.env.MIKROTIK_ENABLED === "true"
+            ? "habilitado"
+            : "no_configurado",
+        interfaces: ultimasInterfaces
     });
-
 });
 
+// ===== RECURSOS DEL MIKROTIK =====
+
+app.get("/api/network/mikrotik/recursos", async (req, res) => {
+
+    try {
+        const datos = await consultarRecursosMikrotik();
+        res.json(datos);
+
+    } catch (error) {
+        console.error("Error recursos MikroTik:", error.message);
+
+        res.status(503).json({
+            estado: "desconectado",
+            mensaje: "No se pudieron obtener los recursos"
+        });
+    }
+});
+// ===== ENDPOINT TP-LINK =====
+
+let ultimosDatosTPLink = {
+    estado: "no_configurado",
+    interfaces: []
+};
+
+app.get("/api/network/tplink", (req, res) => {
+    res.json(ultimosDatosTPLink);
+});
+// ===== SOCKET.IO =====
+
+// ===== MONITOREO MIKROTIK EN TIEMPO REAL =====
+
+if (process.env.MIKROTIK_ENABLED === "true") {
+
+    let consultando = false;
+
+    async function actualizarMikrotik() {
+
+        if (consultando) return;
+
+        consultando = true;
+
+        try {
+            const datos = await consultarMikrotik();
+            io.emit("mikrotik", datos);
+
+            const interfaces = await consultarInterfaces();
+
+            ultimasInterfaces = interfaces;
+
+            io.emit("interfacesMikrotik", interfaces);
+// ===== CPU Y RAM DEL MIKROTIK =====
+
+try {
+    const recursos = await consultarRecursosMikrotik();
+
+    io.emit("recursosMikrotik", recursos);
+
+} catch (error) {
+
+    console.error("Error CPU/RAM MikroTik:", error.message);
+
+    io.emit("recursosMikrotik", {
+        estado: "desconectado"
+    });
+}
+        } catch (error) {
+            console.error("Error SNMP:", error.message);
+
+            io.emit("mikrotik", {
+                estado: "desconectado"
+            });
+
+            io.emit("interfacesMikrotik", []);
+        } finally {
+            consultando = false;
+        }
+    }
+
+    actualizarMikrotik();
+
+    setInterval(actualizarMikrotik, 10000);
+}
 // ===== ACTUALIZACION EN TIEMPO REAL =====
 
 // Enviar informacion cada 3 segundos
@@ -168,7 +278,71 @@ setInterval(async () => {
     }
 
 }, 3000);
+// ===== ACTUALIZACION SNMP MIKROTIK =====
 
+if (process.env.MIKROTIK_ENABLED === "true") {
+
+    setInterval(async () => {
+
+        try {
+
+            const datos = await consultarMikrotik();
+
+            io.emit("mikrotik", datos);
+
+        } catch (error) {
+
+            console.error("Error SNMP:", error.message);
+
+            io.emit("mikrotik", {
+                estado: "desconectado"
+            });
+        }
+
+    }, 10000);
+}
+// ===== MONITOREO TP-LINK =====
+
+if (process.env.TPLINK_ENABLED === "true") {
+
+    let consultandoTPLink = false;
+
+    async function actualizarTPLink() {
+
+        if (consultandoTPLink) return;
+
+        consultandoTPLink = true;
+
+        try {
+            const equipo = await consultarTPLink();
+            const interfaces = await consultarInterfacesTPLink();
+
+            ultimosDatosTPLink = {
+                ...equipo,
+                interfaces
+            };
+
+            io.emit("tplink", ultimosDatosTPLink);
+
+        } catch (error) {
+
+            console.error("Error SNMP TP-Link:", error.message);
+
+            ultimosDatosTPLink = {
+                estado: "desconectado",
+                interfaces: []
+            };
+
+            io.emit("tplink", ultimosDatosTPLink);
+
+        } finally {
+            consultandoTPLink = false;
+        }
+    }
+
+    actualizarTPLink();
+    setInterval(actualizarTPLink, 10000);
+}
 // ===== INICIAR SERVIDOR =====
 
 servidor.listen(PUERTO, () => {
