@@ -24,6 +24,58 @@ function crearSesion() {
     );
 }
 
+// ===== CLASIFICACION DE INTERFACES =====
+
+function clasificarInterfaz(ifType) {
+    switch (Number(ifType)) {
+        case 6:
+            return "ethernet";
+        case 135:
+        case 136:
+            return "vlan";
+        case 209:
+            return "bridge";
+        default:
+            return "otras";
+    }
+}
+
+// Consultar la tabla ifType completa
+function obtenerTiposInterfaces() {
+    return new Promise((resolve, reject) => {
+
+        const sesion = crearSesion();
+        const tipos = new Map();
+
+        sesion.subtree(
+            "1.3.6.1.2.1.2.2.1.3",
+            10,
+            (varbinds) => {
+                for (const vb of varbinds) {
+                    if (snmp.isVarbindError(vb)) continue;
+
+                    const indice = Number(
+                        vb.oid.split(".").pop()
+                    );
+
+                    tipos.set(
+                        indice,
+                        clasificarInterfaz(vb.value)
+                    );
+                }
+            },
+            (error) => {
+                sesion.close();
+
+                if (error) return reject(error);
+
+                resolve(tipos);
+            }
+        );
+    });
+}
+
+
 // ===== CONSULTA SNMP =====
 
 function consultarOids(oids) {
@@ -70,13 +122,61 @@ export async function consultarMikrotik() {
 
 // ===== INTERFACES ETHERNET =====
 
-const INTERFACES = [
-    { indice: 2, nombre: "WAN-ISP" },
-    { indice: 3, nombre: "ether2" },
-    { indice: 4, nombre: "ether3" },
-    { indice: 5, nombre: "ether4" },
-    { indice: 6, nombre: "ether5" }
-];
+
+// ===== DESCUBRIMIENTO DINAMICO DE INTERFACES =====
+
+async function descubrirInterfaces() {
+
+    return new Promise((resolve, reject) => {
+
+        const sesion = crearSesion();
+
+
+const interfaces = [];
+
+        // OID ifName: nombre actual de cada interfaz
+        const oid = "1.3.6.1.2.1.31.1.1.1.1";
+
+        sesion.subtree(
+            oid,
+            10,
+
+            (varbinds) => {
+
+                for (const vb of varbinds) {
+
+                    if (snmp.isVarbindError(vb)) {
+                        continue;
+                    }
+
+                    const indice = Number(
+                        vb.oid.split(".").pop()
+                    );
+
+                    interfaces.push({
+                        indice,
+                        nombre: vb.value.toString()
+                    });
+                }
+            },
+
+            (error) => {
+
+                sesion.close();
+
+                if (error) {
+                    return reject(error);
+                }
+
+                interfaces.sort(
+                    (a, b) => a.indice - b.indice
+                );
+
+                resolve(interfaces);
+            }
+        );
+    });
+}
 
 // Almacena las lecturas anteriores en memoria
 const lecturasAnteriores = new Map();
@@ -116,7 +216,8 @@ export async function consultarInterfaces() {
     if (process.env.MIKROTIK_ENABLED !== "true") {
         return [];
     }
-
+const INTERFACES = await descubrirInterfaces();
+const tipos = await obtenerTiposInterfaces();
     const oids = [];
 
     for (const interfaz of INTERFACES) {
@@ -172,9 +273,11 @@ export async function consultarInterfaces() {
             tiempo: ahora
         });
 
-        interfaces.push({
-            nombre: interfaz.nombre,
-            indice: interfaz.indice,
+
+            interfaces.push({
+    nombre: interfaz.nombre,
+    indice: interfaz.indice,
+    tipo: tipos.get(interfaz.indice) ?? "otras",
             estado: estado === 1 ? "activa" : "inactiva",
             rxMbps,
             txMbps
@@ -184,3 +287,94 @@ export async function consultarInterfaces() {
     return interfaces;
 }
 
+
+// ===== RECURSOS CPU Y RAM MIKROTIK =====
+
+// OID de carga de los procesadores
+const OID_CPU = "1.3.6.1.2.1.25.3.3.1.2";
+
+// OID de memoria principal, según la identificación SNMP
+const OID_RAM_UNIDAD = "1.3.6.1.2.1.25.2.3.1.4.65536";
+const OID_RAM_TOTAL = "1.3.6.1.2.1.25.2.3.1.5.65536";
+const OID_RAM_USADA = "1.3.6.1.2.1.25.2.3.1.6.65536";
+
+// Obtener todas las CPU sin fijar su cantidad
+function consultarCPUs() {
+    return new Promise((resolve, reject) => {
+        const sesion = crearSesion();
+        const valores = [];
+
+        sesion.subtree(
+            OID_CPU,
+            10,
+            (varbinds) => {
+                for (const vb of varbinds) {
+                    if (snmp.isVarbindError(vb)) continue;
+                    const valor = Number(vb.value);
+                    if (Number.isFinite(valor)) {
+                        valores.push(valor);
+                    }
+                }
+            },
+            (error) => {
+                sesion.close();
+                if (error) return reject(error);
+                resolve(valores);
+            }
+        );
+    });
+}
+
+export async function consultarRecursosMikrotik() {
+
+    if (process.env.MIKROTIK_ENABLED !== "true") {
+        return { estado: "no_configurado" };
+    }
+
+    const [cpus, ram] = await Promise.all([
+        consultarCPUs(),
+        consultarOids([
+            OID_RAM_UNIDAD,
+            OID_RAM_TOTAL,
+            OID_RAM_USADA
+        ])
+    ]);
+
+    const unidad = Number(ram[0].value);
+    const total = Number(ram[1].value);
+    const usada = Number(ram[2].value);
+
+    if (
+        cpus.length === 0 ||
+        !Number.isFinite(unidad) || unidad <= 0 ||
+        !Number.isFinite(total) || total <= 0 ||
+        !Number.isFinite(usada) || usada < 0
+    ) {
+        throw new Error("Métricas SNMP no válidas");
+    }
+
+    const cpuPromedio =
+        cpus.reduce((suma, valor) => suma + valor, 0) /
+        cpus.length;
+
+    return {
+        estado: "conectado",
+
+        cpu: {
+            nucleos: cpus.length,
+            porcentaje: Number(cpuPromedio.toFixed(2))
+        },
+
+        ram: {
+            totalMiB: Number(
+                ((total * unidad) / 1048576).toFixed(2)
+            ),
+            usadaMiB: Number(
+                ((usada * unidad) / 1048576).toFixed(2)
+            ),
+            porcentaje: Number(
+                ((usada / total) * 100).toFixed(2)
+            )
+        }
+    };
+}
